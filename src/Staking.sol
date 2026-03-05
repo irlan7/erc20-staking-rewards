@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Staking {
-    IERC20 public stakingToken;
-    IERC20 public rewardToken;
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable STAKING_TOKEN;
+    IERC20 public immutable REWARD_TOKEN;
     uint256 public rewardRate = 1e16;
     
     mapping(address => uint256) public balance;
@@ -12,8 +16,8 @@ contract Staking {
     mapping(address => uint256) public pendingReward;
 
     constructor(address _staking, address _reward) {
-        stakingToken = IERC20(_staking);
-        rewardToken = IERC20(_reward);
+        STAKING_TOKEN = IERC20(_staking);
+        REWARD_TOKEN = IERC20(_reward);
     }
 
     function _updateReward(address account) internal {
@@ -27,7 +31,7 @@ contract Staking {
 
     function stake(uint256 amount) external {
         _updateReward(msg.sender);
-        stakingToken.transferFrom(msg.sender, address(this), amount);
+        STAKING_TOKEN.safeTransferFrom(msg.sender, address(this), amount);
         balance[msg.sender] += amount;
     }
 
@@ -35,7 +39,7 @@ contract Staking {
         require(balance[msg.sender] >= amount, "not enough");
         _updateReward(msg.sender);
         balance[msg.sender] -= amount;
-        stakingToken.transfer(msg.sender, amount);
+        STAKING_TOKEN.safeTransfer(msg.sender, amount);
     }
 
     function claim() external {
@@ -44,6 +48,6 @@ contract Staking {
         require(reward > 0, "No reward to claim");
         
         pendingReward[msg.sender] = 0;
-        rewardToken.transfer(msg.sender, reward);
+        REWARD_TOKEN.safeTransfer(msg.sender, reward);
     }
 }
